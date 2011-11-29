@@ -1,3 +1,8 @@
+/**
+ * Uses statistical inference to generate new loops that fit with a provided
+ * set of loops.
+ */
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
@@ -13,7 +18,7 @@ import javax.sound.midi.Synthesizer;
 public class SequenceInferer {
 
 	public static void main(String[] args) {
-		ArrayList<LoopData> set = matchLoops();
+		ArrayList<LoopData> set = matchLoops("sample.txt");
 		int[] shifts = alignLoops(set);
 		int[][] loop = composeLoop(set, shifts);
 		
@@ -27,17 +32,24 @@ public class SequenceInferer {
 			System.out.println(Arrays.toString(a));
 		}
 		
+		
+		// preview sound
 		PreviewThread thread = new PreviewThread(loop);
 		thread.start();
 	}
 
-	protected static ArrayList<LoopData> matchLoops() {
+	/**
+	 * Returns a list of similar loops from the dataset within a given matching
+	 * factor, based on the metrics of standard deviation in notes, note lengths,
+	 * pauses, and difference between note lengths and pauses.
+	 */
+	protected static ArrayList<LoopData> matchLoops(String file) {
 		final double matchFactor = .2;
 
 		ArrayList<LoopData> loops = new ArrayList<LoopData>();
 
 		try {
-			Scanner scanner = new Scanner(new File("sample.txt"));
+			Scanner scanner = new Scanner(new File(file));
 			while (scanner.hasNextLine()) {
 				String str = scanner.nextLine();
 				if (str.length() > 0) {
@@ -72,6 +84,12 @@ public class SequenceInferer {
 		return basis;
 	}
 
+	/**
+	 * Returns an array of indices representing the shifting needed for the longest
+	 * loop to align with the loop at index i. Shifting is performed as to minimize
+	 * the standard deviation of notes across tracks. Tracks are "scaled" to compensate
+	 * for unequal lengths.
+	 */
 	protected static int[] alignLoops(ArrayList<LoopData> loops) {
 		// find longest loop
 		int size = 0;
@@ -109,6 +127,12 @@ public class SequenceInferer {
 		return shifts;
 	}
 
+	/**
+	 * Returns an array of notes, note lengths, and pauses. Generates a new loop
+	 * from the provided set of loops and their given shifts by inspecting patterns
+	 * in the set's normalized note sequences and assigning like notes similar
+	 * durations and pauses. The final composition is then de-normalized.
+	 */
 	protected static int[][] composeLoop(ArrayList<LoopData> loops, int[] shifts) {
 		final int accuracy = 10;
 
@@ -137,6 +161,7 @@ public class SequenceInferer {
 		}
 		allNoteAvg /= loops.size();
 		variance = Math.sqrt(variance);
+		// determine the note range
 		int minNote = (int)Math.max(allNoteAvg - 2*variance*Math.random(), 0);
 		int maxNote = (int)Math.min(allNoteAvg + 2*variance*Math.random(), 128);
 
@@ -224,6 +249,9 @@ public class SequenceInferer {
 		return all;
 	}
 
+	/**
+	 * Utility function, quicksorts array of loops based on array of factors.
+	 */
 	protected static void sortLoops(ArrayList<LoopData> loops, ArrayList<Double> factor, int base, int top){
 		int low = base;
 		int high = top;
