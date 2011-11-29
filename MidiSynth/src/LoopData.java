@@ -1,6 +1,9 @@
+/**
+ * Holds statistical data for a given loop.
+ */
+
 import java.util.Arrays;
 import java.util.Random;
-
 
 public class LoopData {
 	
