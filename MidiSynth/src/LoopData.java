@@ -1,32 +1,32 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.Scanner;
 
 
 public class LoopData {
 	
 	protected long seed;
 	
-	protected int length;
+	public int length;
 
-	protected int[] note;
-	protected int[] time;
+	public int[] note;
+	public int[] time;
 	protected int[] wait;
 	
 	public int noteAvg = 0;
 	public int timeAvg = 0;
 	public int waitAvg = 0;
 	
-	protected int[] noteDiv;
-	protected int[] timeDiv;
-	protected int[] waitDiv;
+	public int[] noteDiv;
+	public int[] timeDiv;
+	public int[] waitDiv;
 	
 	public double noteStd = 0;
 	public double timeStd = 0;
 	public double waitStd = 0;
+	
+	public double[] noteNrm;
+	public double[] timeNrm;
+	public double[] waitNrm;
 	
 	public LoopData(long seed) {
 		this.seed = seed;
@@ -40,6 +40,10 @@ public class LoopData {
 		noteDiv = new int[length];
 		timeDiv = new int[length];
 		waitDiv = new int[length];
+		
+		noteNrm = new double[length];
+		timeNrm = new double[length];
+		waitNrm = new double[length];
 		
 		// Create values
 		for (int i=0; i<length; i++) {
@@ -74,15 +78,42 @@ public class LoopData {
 		noteStd = Math.sqrt(noteStd / length);
 		timeStd = Math.sqrt(timeStd / length);
 		waitStd = Math.sqrt(waitStd / length);
+		
+		// Find normalized divergences
+		int noteMin, noteMax;
+		int timeMin, timeMax;
+		int waitMin, waitMax;
+		noteMin = noteMax = noteDiv[0];
+		timeMin = timeMax = timeDiv[0];
+		waitMin = waitMax = waitDiv[0];
+		for (int i=1; i<length; i++) {
+			noteMin = Math.min(noteMin, noteDiv[i]);
+			noteMax = Math.max(noteMax, noteDiv[i]);
+			timeMin = Math.min(timeMin, timeDiv[i]);
+			timeMax = Math.max(timeMax, timeDiv[i]);
+			waitMin = Math.min(waitMin, waitDiv[i]);
+			waitMax = Math.max(waitMax, waitDiv[i]);
+		}
+		int noteSpr = noteMax - noteMin;
+		int timeSpr = timeMax - timeMin;
+		int waitSpr = waitMax - waitMin;
+		for (int i=0; i<length; i++) {
+			noteNrm[i] = (double) (noteDiv[i] - noteMin) / noteSpr;
+			timeNrm[i] = (double) (timeDiv[i] - timeMin) / timeSpr;
+			waitNrm[i] = (double) (waitDiv[i] - waitMin) / waitSpr;
+		}
 	}
 	
 	public void printStats() {
 		System.out.println(seed);
 		System.out.println("Notes: "+Arrays.toString(note));
 		System.out.println("N avg: "+Arrays.toString(noteDiv)+"  ("+noteAvg+") ["+noteStd+"]");
+		System.out.println("N nrm: "+Arrays.toString(noteNrm));
 		System.out.println("Times: "+Arrays.toString(time));
 		System.out.println("T avg: "+Arrays.toString(timeDiv)+"  ("+timeAvg+") ["+timeStd+"]");
+		System.out.println("T nrm: "+Arrays.toString(timeNrm));
 		System.out.println("Waits: "+Arrays.toString(wait));
 		System.out.println("W avg: "+Arrays.toString(waitDiv)+"  ("+waitAvg+") ["+waitStd+"]");
+		System.out.println("W nrm: "+Arrays.toString(waitNrm));
 	}
 }
