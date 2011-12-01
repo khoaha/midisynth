@@ -31,6 +31,22 @@ public class LoopData {
 	public double[] timeNrm;
 	public double[] waitNrm;
 	
+	public LoopData(int note_[], int time_[], int wait_[]) {
+		length = note_.length;
+		
+		note = new int[length];
+		time = new int[length];
+		wait = new int[length];
+		
+		for(int i = 0; i < length; i ++) {
+			note[i] = note_[i];
+			time[i] = time_[i];
+			wait[i] = wait_[i];
+		}
+		
+		loopSetup();
+	}
+	
 	public LoopData(long seed) {
 		this.seed = seed;
 		Random rand = new Random(seed);
@@ -40,6 +56,17 @@ public class LoopData {
 		time = new int[length];
 		wait = new int[length];
 		
+		// Create values
+		for (int i=0; i<length; i++) {
+			note[i] = (int)(rand.nextDouble()*128);
+			time[i] = (int)(rand.nextDouble()*500)+100;
+			wait[i] = (int)(rand.nextDouble()*500)+100;
+		}
+		
+		loopSetup();
+	}
+	
+	private void loopSetup() {
 		noteDiv = new int[length];
 		timeDiv = new int[length];
 		waitDiv = new int[length];
@@ -47,13 +74,6 @@ public class LoopData {
 		noteNrm = new double[length];
 		timeNrm = new double[length];
 		waitNrm = new double[length];
-		
-		// Create values
-		for (int i=0; i<length; i++) {
-			note[i] = (int)(rand.nextDouble()*128);
-			time[i] = (int)(rand.nextDouble()*500)+100;
-			wait[i] = (int)(rand.nextDouble()*500)+100;
-		}
 		
 		// Find averages
 		for (int i=0; i<length; i++) {

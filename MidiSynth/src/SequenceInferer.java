@@ -1,12 +1,8 @@
-/**
- * Uses statistical inference to generate new loops that fit with a provided
- * set of loops.
- */
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Scanner;
 
 import javax.sound.midi.Instrument;
@@ -14,11 +10,19 @@ import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Synthesizer;
 
-
+/**
+ * Uses statistical inference to generate new loops that fit with a provided
+ * set of loops.
+ */
 public class SequenceInferer {
 
+	private enum Format {
+		SEED, ARRAY;
+	}
+	
 	public static void main(String[] args) {
-		ArrayList<LoopData> set = matchLoops("sample.txt");
+		/* ArrayList<LoopData> set = matchLoops("arraysample.txt", Format.ARRAY); */
+		ArrayList<LoopData> set = matchLoops("sample.txt", Format.SEED);
 		int[] shifts = alignLoops(set);
 		int[][] loop = composeLoop(set, shifts);
 		
@@ -43,21 +47,49 @@ public class SequenceInferer {
 	 * factor, based on the metrics of standard deviation in notes, note lengths,
 	 * pauses, and difference between note lengths and pauses.
 	 */
-	protected static ArrayList<LoopData> matchLoops(String file) {
+	protected static ArrayList<LoopData> matchLoops(String file, Format f) {
 		final double matchFactor = .2;
 
 		ArrayList<LoopData> loops = new ArrayList<LoopData>();
 
 		try {
 			Scanner scanner = new Scanner(new File(file));
-			while (scanner.hasNextLine()) {
-				String str = scanner.nextLine();
-				if (str.length() > 0) {
-					LoopData d = new LoopData(Long.parseLong(str));
+			switch(f) {
+			case SEED:
+				while (scanner.hasNextLine()) {
+					String str = scanner.nextLine();
+					if (str.length() > 0) {
+						LoopData d = new LoopData(Long.parseLong(str));
+						loops.add(d);
+						//d.printStats();
+					}
+				}
+				break;
+			case ARRAY:
+				String note = "", time, wait;
+				/* Read in the format ouput by the sequencer */
+				while(scanner.hasNextLine()) {
+					/* read in, handling newlines separating data.
+					 * There can be any number of newlines separating each three-line sequence */
+					while(note.length() == 0)
+						note = scanner.nextLine();
+					time = scanner.nextLine();
+					wait = scanner.nextLine();
+					
+					/* remove leading and trailing []s */
+					note = note.substring(1, note.length()-1);
+					time = time.substring(1, time.length()-1);
+					wait = wait.substring(1, wait.length()-1);
+					
+					String noteArr[] = note.split(", ");
+					String timeArr[] = time.split(", ");
+					String waitArr[] = wait.split(", ");
+					
+					LoopData d = new LoopData(parseStringArray(noteArr), parseStringArray(timeArr), parseStringArray(waitArr));
 					loops.add(d);
-					//d.printStats();
 				}
 			}
+			
 			scanner.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -82,6 +114,16 @@ public class SequenceInferer {
 			basis.add(loops.remove(0));
 
 		return basis;
+	}
+
+	/**
+	 * @param strArr
+	 */
+	private static int[] parseStringArray(String[] strArr) {
+		int arr[] = new int[strArr.length];
+		for(int i = 0; i < strArr.length; i ++)
+			arr[i] = Integer.parseInt(strArr[i]);
+		return arr;
 	}
 
 	/**
@@ -136,6 +178,8 @@ public class SequenceInferer {
 	protected static int[][] composeLoop(ArrayList<LoopData> loops, int[] shifts) {
 		final int accuracy = 10;
 
+		Random rand = new Random();
+		
 		// find longest loop
 		int maxSize = 0;
 		LoopData longest = null;
@@ -145,6 +189,7 @@ public class SequenceInferer {
 		}
 
 		// randomly copy size
+		// Keep statically random
 		int size = loops.get((int)(Math.random()*loops.size())).length;
 
 		double[] noteNrm = new double[size];
@@ -162,10 +207,14 @@ public class SequenceInferer {
 		allNoteAvg /= loops.size();
 		variance = Math.sqrt(variance);
 		// determine the note range
-		int minNote = (int)Math.max(allNoteAvg - 2*variance*Math.random(), 0);
-		int maxNote = (int)Math.min(allNoteAvg + 2*variance*Math.random(), 128);
+		// TODO: Consider a better algorithm?
+		int minNote = (int)Math.max(allNoteAvg - variance*(cappedGaussianRandom(rand) + 1), 0);
+		int maxNote = (int)Math.min(allNoteAvg + variance*(cappedGaussianRandom(rand) + 1), 128);
 
+		System.out.println("{ allNoteAvg = " + allNoteAvg + ", variance = " + variance + ", minNote = " + minNote + ", maxNote = " + maxNote + " }");
+		
 		// randomize first note
+		// Leave statically random
 		noteNrm[0] = Math.random();
 		// set all notes, pauses, and durations
 		for (int n=0; n<size; n++) {
@@ -218,12 +267,12 @@ public class SequenceInferer {
 			waitStd = Math.sqrt(waitStd / loops.size());
 			nextStd = Math.sqrt(nextStd / loops.size());
 			// set values
-			time[n] = (int)(timeAvg + (2*Math.random()-1)*timeStd);
-			wait[n] = (int)(waitAvg + (2*Math.random()-1)*waitStd);
+			time[n] = (int)(timeAvg + cappedGaussianRandom(rand)*timeStd);
+			wait[n] = (int)(waitAvg + cappedGaussianRandom(rand)*waitStd);
 
 			// pick next note
 			if (n < size-1)
-				noteNrm[n+1] = note[n] + nextAvg + (2*Math.random()-1)*nextStd;
+				noteNrm[n+1] = note[n] + nextAvg + cappedGaussianRandom(rand)*nextStd;
 		}
 
 		// re-normalize normals
@@ -284,6 +333,17 @@ public class SequenceInferer {
 		sortLoops(loops, factor, low == base ? low+1 : low, top);
 	}
 
+	/**
+	 * Returns a normally distributed value between -1 and 1.  
+	 */
+	private static double cappedGaussianRandom(Random rand) {
+		double i;
+		do {
+			i = rand.nextGaussian() / 3.0;
+		} while(i < -1 || i > 1);
+		return i;
+	}
+	
 }
 
 class PreviewThread extends Thread {
