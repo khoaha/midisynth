@@ -9,15 +9,10 @@ import java.util.Scanner;
 
 public class CleanSamples {
 
+	static final String file = "crowd1.txt";
+	
 	public static void main(String [] args){
-		new CleanSamples();
-		//		int[] data = new int[10];
-		//		for(int i = 0; i < data.length/2; i++){
-		//			data[i] = (int)(Math.random()*20);
-		//			data[i + data.length/2] = data[i];
-		//		}
-		//		quick_sort(data, 0, data.length-1);
-		//		System.out.println(Arrays.toString(data));
+		new CleanSamples(file, 5);
 	}
 
 	public static void quick_sort(int[] data, int low, int high)
@@ -55,18 +50,18 @@ public class CleanSamples {
 		quick_sort(data, left, high);
 	}
 
-	public CleanSamples() {
+	public CleanSamples(String file, int minRating) {
 		ArrayList<Long> rateList = new ArrayList<Long>();
 		ArrayList<Integer> ratings = new ArrayList<Integer>();
-		int index = 0;
+		String newFile = file.substring(0, file.lastIndexOf('.'))+"_sort."+file.substring(file.lastIndexOf('.')+1);
 		try {
-			Scanner in = new Scanner(new FileReader("rates.txt"));
+			Scanner in = new Scanner(new FileReader(file));
 			while(in.hasNextLine()){
 				rateList.add(in.nextLong());
 				ratings.add(in.nextInt());
 			}
 			sortLoops(ratings, rateList, 0, rateList.size()-1);
-			PrintWriter out = new PrintWriter(new FileOutputStream("sortrates.txt"));
+			PrintWriter out = new PrintWriter(new FileOutputStream(newFile));
 			for (int i = 0; i < ratings.size(); i++) {
 				int count = 1;
 				while (i+1<rateList.size() && rateList.get(i+1).equals(rateList.get(i))) {
@@ -75,7 +70,8 @@ public class CleanSamples {
 					count++;
 				}
 				ratings.set(i, ratings.get(i)/count);
-				out.println(rateList.get(i) + " " + ratings.get(i));
+				if (ratings.get(i) >= minRating)
+					out.println(rateList.get(i) + " " + ratings.get(i));
 			}
 			out.close();
 			System.out.println(ratings);

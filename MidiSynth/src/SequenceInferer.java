@@ -19,13 +19,13 @@ public class SequenceInferer {
 	private enum Format {
 		SEED, ARRAY;
 	}
-	
+
 	public static void main(String[] args) {
 		/* ArrayList<LoopData> set = matchLoops("arraysample.txt", Format.ARRAY); */
-		ArrayList<LoopData> set = matchLoops("sample.txt", Format.SEED);
+		ArrayList<LoopData> set = matchLoops("crowd1_sort.txt", Format.SEED);
 		int[] shifts = alignLoops(set);
 		int[][] loop = composeLoop(set, shifts);
-		
+
 		// print
 		for (LoopData s : set) {
 			s.printStats();
@@ -35,8 +35,7 @@ public class SequenceInferer {
 		for (int[] a : loop) {
 			System.out.println(Arrays.toString(a));
 		}
-		
-		
+
 		// preview sound
 		PreviewThread thread = new PreviewThread(loop);
 		thread.start();
@@ -59,37 +58,41 @@ public class SequenceInferer {
 				while (scanner.hasNextLine()) {
 					String str = scanner.nextLine();
 					if (str.length() > 0) {
-						LoopData d = new LoopData(Long.parseLong(str));
+						String[] splitstr = str.split(" ");
+						LoopData d = new LoopData(Long.parseLong(splitstr[0]), Integer.parseInt(splitstr[1]));
 						loops.add(d);
 						//d.printStats();
 					}
 				}
 				break;
 			case ARRAY:
-				String note = "", time, wait;
-				/* Read in the format ouput by the sequencer */
+				String rating = "", note, time, wait;
+				/* Read in the format output by the sequencer */
 				while(scanner.hasNextLine()) {
 					/* read in, handling newlines separating data.
 					 * There can be any number of newlines separating each three-line sequence */
-					while(note.length() == 0)
-						note = scanner.nextLine();
+					while(rating.length() == 0)
+						rating = scanner.nextLine();
+					note = scanner.nextLine();
 					time = scanner.nextLine();
 					wait = scanner.nextLine();
-					
+
 					/* remove leading and trailing []s */
 					note = note.substring(1, note.length()-1);
 					time = time.substring(1, time.length()-1);
 					wait = wait.substring(1, wait.length()-1);
-					
+
 					String noteArr[] = note.split(", ");
 					String timeArr[] = time.split(", ");
 					String waitArr[] = wait.split(", ");
-					
-					LoopData d = new LoopData(parseStringArray(noteArr), parseStringArray(timeArr), parseStringArray(waitArr));
+
+					LoopData d = new LoopData(parseStringArray(noteArr), parseStringArray(timeArr), parseStringArray(waitArr), Integer.parseInt(rating));
+
 					loops.add(d);
+					//d.printStats();
 				}
 			}
-			
+
 			scanner.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -137,13 +140,18 @@ public class SequenceInferer {
 		int size = 0;
 		LoopData longest = null;
 		for (LoopData l : loops) {
-			size = Math.max(size, l.length);
-			longest = l;
+			if (l.length > size) {
+				size = l.length;
+				longest = l;
+			}
 		}
+
 		// shift loops to align
 		int shifts[] = new int[loops.size()];
 		for (int n=0; n<loops.size(); n++) {
 			LoopData l = loops.get(n);
+			if (l == longest)
+				continue;
 			double minStd = Double.MAX_VALUE;
 			// check all alignments
 			for (int i=0; i<size; i++) {
@@ -152,7 +160,9 @@ public class SequenceInferer {
 				// find divergences
 				for (int j=0; j<size; j++) {
 					double scaleIndex = (double) j * l.length / size;
-					int tweenNote = (int)((1 + scaleIndex%1)*l.note[(int)scaleIndex] + (1 - scaleIndex%1)*l.note[(int)Math.min(scaleIndex+1, l.length-1)]);
+					int leftNote = l.note[(int)scaleIndex];
+					int rightNote = l.note[(int)Math.min(scaleIndex+1, l.length-1)];
+					int tweenNote = leftNote + (int)((rightNote-leftNote)*(scaleIndex%1));
 					dif[j] = tweenNote - longest.note[(i + j) % longest.note.length];
 				}
 				// find standard deviation
@@ -166,6 +176,7 @@ public class SequenceInferer {
 				}
 			}
 		}
+
 		return shifts;
 	}
 
@@ -179,13 +190,27 @@ public class SequenceInferer {
 		final int accuracy = 10;
 
 		Random rand = new Random();
-		
+
+		// store and normalize ratings
+		double[] rating = new double[loops.size()];
+		double ratingSum = 0;
+		double ratingAvg = 0;
+		for (int i=0; i<rating.length; i++) {
+			rating[i] = loops.get(i).rating;
+			ratingSum += rating[i];
+		}
+		ratingAvg = ratingSum / rating.length;
+		ratingSum = 0;
+		for (int i=0; i<rating.length; i++) {
+			rating[i] /= ratingAvg;
+			ratingSum += rating[i];
+		}
+
 		// find longest loop
 		int maxSize = 0;
-		LoopData longest = null;
 		for (LoopData l : loops) {
-			maxSize = Math.max(maxSize, l.length);
-			longest = l;
+			if (l.length > maxSize)
+				maxSize = l.length;
 		}
 
 		// randomly copy size
@@ -200,63 +225,66 @@ public class SequenceInferer {
 		// prepare for de-normalizing notes
 		int allNoteAvg = 0;
 		double variance = 0;
-		for (LoopData l : loops) {
-			allNoteAvg += l.noteAvg;
+		for (int i=0; i<loops.size(); i++) {
+			LoopData l = loops.get(i);
+			allNoteAvg += l.noteAvg * rating[i];
 			variance += Math.pow(l.noteStd, 2);
 		}
-		allNoteAvg /= loops.size();
+		allNoteAvg /= ratingSum;
 		variance = Math.sqrt(variance);
 		// determine the note range
 		// TODO: Consider a better algorithm?
 		int minNote = (int)Math.max(allNoteAvg - variance*(cappedGaussianRandom(rand) + 1), 0);
 		int maxNote = (int)Math.min(allNoteAvg + variance*(cappedGaussianRandom(rand) + 1), 128);
 
-		System.out.println("{ allNoteAvg = " + allNoteAvg + ", variance = " + variance + ", minNote = " + minNote + ", maxNote = " + maxNote + " }");
-		
 		// randomize first note
 		// Leave statically random
 		noteNrm[0] = Math.random();
 		// set all notes, pauses, and durations
 		for (int n=0; n<size; n++) {
 			int index = 0;
-			double[] dif = new double[maxSize];
-			// Find divergences, to a degree of fuzziness
-			for (int i=0; i<loops.size(); i++) {
-				int ind = (int)(double)loops.get(i).length/maxSize*((index+shifts[i])%maxSize);
-				dif[i] = Math.floor((longest.noteNrm[i] - noteNrm[ind]) * accuracy) / accuracy;
-			}
 			double minDif = Double.MAX_VALUE;
-			int shift = (int)(Math.random()*maxSize);
-			// Find lowest difference
-			for (int i=0; i<loops.size(); i++) {
-				if (dif[(i+shift)%maxSize] < minDif) {
-					minDif = dif[(i+shift)%maxSize];
-					index = (i+shift)%maxSize;
+			// match note to closest across all loops	
+			int offset = (int)(Math.random()*maxSize);
+			for (int i=0; i<maxSize; i++) {
+				double dif = 0;
+				// Find divergences, to a degree of fuzziness
+				for (int j=0; j<loops.size(); j++) {
+					LoopData l = loops.get(j);
+					int ind = (int)((double)l.length/maxSize*((i+offset+shifts[j])%maxSize));
+					dif += Math.floor(Math.abs(l.noteNrm[ind] - noteNrm[n]) * accuracy) / accuracy;
+				}
+				// Find lowest difference
+				if (dif < minDif) {
+					minDif = dif;
+					index = (i+offset)%maxSize;
 				}
 			}
+			
 			// find duration and pause averages
 			int timeAvg = 0;
 			int waitAvg = 0;
 			double nextAvg = 0;
 			for (int i=0; i<loops.size(); i++) {
 				LoopData l = loops.get(i);
-				int ind = (int)(double)l.length/maxSize*((index+shifts[i])%maxSize);
-				timeAvg += l.time[ind];
-				waitAvg += l.wait[ind];
+				int ind = (int)((double)l.length/maxSize*((index+shifts[i])%maxSize));
+				timeAvg += l.time[ind] * rating[i];
+				waitAvg += l.wait[ind] * rating[i];
 				// prepare next note
 				if (n < size-1)
-					nextAvg += l.noteNrm[ind] - l.noteNrm[(ind+1)%l.length];
-			}
-			timeAvg /= loops.size();
-			waitAvg /= loops.size();
-			nextAvg /= loops.size();
+					nextAvg += (l.noteNrm[(ind+1)%l.length] - l.noteNrm[ind]) * rating[i];
+				}
+			timeAvg /= ratingSum;
+			waitAvg /= ratingSum;
+			nextAvg /= ratingSum;
+
 			// find standard deviations
 			double timeStd = 0;
 			double waitStd = 0;
 			double nextStd = 0;
 			for (int i=0; i<loops.size(); i++) {
 				LoopData l = loops.get(i);
-				int ind = (int)(double)l.length/maxSize*((index+shifts[i])%maxSize);
+				int ind = (int)((double)l.length/maxSize*((index+shifts[i])%maxSize));
 				timeStd += Math.pow(l.time[ind] - timeAvg, 2);
 				waitStd += Math.pow(l.wait[ind] - waitAvg, 2);
 				// prepare next note
@@ -266,13 +294,14 @@ public class SequenceInferer {
 			timeStd = Math.sqrt(timeStd / loops.size());
 			waitStd = Math.sqrt(waitStd / loops.size());
 			nextStd = Math.sqrt(nextStd / loops.size());
-			// set values
-			time[n] = (int)(timeAvg + cappedGaussianRandom(rand)*timeStd);
-			wait[n] = (int)(waitAvg + cappedGaussianRandom(rand)*waitStd);
 
+			// set values
+			time[n] = (int)Math.max(0, timeAvg + cappedGaussianRandom(rand)*timeStd);
+			wait[n] = (int)Math.max(0, waitAvg + cappedGaussianRandom(rand)*waitStd);
+			
 			// pick next note
 			if (n < size-1)
-				noteNrm[n+1] = note[n] + nextAvg + cappedGaussianRandom(rand)*nextStd;
+				noteNrm[n+1] = Math.min(128, Math.max(0, note[n] + nextAvg + cappedGaussianRandom(rand)*nextStd));
 		}
 
 		// re-normalize normals
@@ -336,14 +365,14 @@ public class SequenceInferer {
 	/**
 	 * Returns a normally distributed value between -1 and 1.  
 	 */
-	private static double cappedGaussianRandom(Random rand) {
+	protected static double cappedGaussianRandom(Random rand) {
 		double i;
 		do {
 			i = rand.nextGaussian() / 3.0;
 		} while(i < -1 || i > 1);
 		return i;
 	}
-	
+
 }
 
 class PreviewThread extends Thread {
