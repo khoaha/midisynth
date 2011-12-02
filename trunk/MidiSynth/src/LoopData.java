@@ -10,6 +10,7 @@ public class LoopData {
 	protected long seed;
 	
 	public int length;
+	public int rating;
 
 	public int[] note;
 	public int[] time;
@@ -31,8 +32,9 @@ public class LoopData {
 	public double[] timeNrm;
 	public double[] waitNrm;
 	
-	public LoopData(int note_[], int time_[], int wait_[]) {
+	public LoopData(int note_[], int time_[], int wait_[], int rating) {
 		length = note_.length;
+		this.rating = rating;
 		
 		note = new int[length];
 		time = new int[length];
@@ -47,10 +49,11 @@ public class LoopData {
 		loopSetup();
 	}
 	
-	public LoopData(long seed) {
+	public LoopData(long seed, int rating) {
 		this.seed = seed;
+		this.rating = rating;
 		Random rand = new Random(seed);
-		length = (int)(rand.nextDouble()*6)+4;
+		length = (int)(rand.nextDouble()*5)+6;
 
 		note = new int[length];
 		time = new int[length];
@@ -129,7 +132,7 @@ public class LoopData {
 	
 	public void printStats() {
 		System.out.println(seed);
-		System.out.println("Notes: "+Arrays.toString(note));
+		System.out.println("Notes: "+Arrays.toString(note) +" |"+length+"|");
 		System.out.println("N avg: "+Arrays.toString(noteDiv)+"  ("+noteAvg+") ["+noteStd+"]");
 		System.out.println("N nrm: "+Arrays.toString(noteNrm));
 		System.out.println("Times: "+Arrays.toString(time));
