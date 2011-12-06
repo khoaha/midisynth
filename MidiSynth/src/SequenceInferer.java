@@ -5,10 +5,6 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.Scanner;
 
-import javax.sound.midi.Instrument;
-import javax.sound.midi.MidiChannel;
-import javax.sound.midi.MidiSystem;
-import javax.sound.midi.Synthesizer;
 
 /**
  * Uses statistical inference to generate new loops that fit with a provided
@@ -16,13 +12,18 @@ import javax.sound.midi.Synthesizer;
  */
 public class SequenceInferer {
 
-	private enum Format {
-		SEED, ARRAY;
+	public static void main(String[] args) {
+		createLoopFromFile("crowd1_sort.txt", Format.SEED);
 	}
 
-	public static void main(String[] args) {
+	/**
+	 * Play 
+	 * @param string
+	 * @param seed
+	 */
+	public static int[][] createLoopFromFile(String filename, Format fileFormat) {
 		/* ArrayList<LoopData> set = matchLoops("arraysample.txt", Format.ARRAY); */
-		ArrayList<LoopData> set = matchLoops("crowd1_sort.txt", Format.SEED);
+		ArrayList<LoopData> set = matchLoops(filename, fileFormat);
 		int[] shifts = alignLoops(set);
 		int[][] loop = composeLoop(set, shifts);
 
@@ -36,9 +37,7 @@ public class SequenceInferer {
 			System.out.println(Arrays.toString(a));
 		}
 
-		// preview sound
-		PreviewThread thread = new PreviewThread(loop);
-		thread.start();
+		return loop;
 	}
 
 	/**
@@ -125,7 +124,7 @@ public class SequenceInferer {
 	private static int[] parseStringArray(String[] strArr) {
 		int arr[] = new int[strArr.length];
 		for(int i = 0; i < strArr.length; i ++)
-			arr[i] = Integer.parseInt(strArr[i]);
+			arr[i] = Integer.parseInt(strArr[i].trim());
 		return arr;
 	}
 
@@ -373,36 +372,4 @@ public class SequenceInferer {
 		return i;
 	}
 
-}
-
-class PreviewThread extends Thread {
-	int[][] sheet;
-
-	public PreviewThread(int[][] sheet) {
-		this.sheet = sheet;
-	}
-
-	public void run() {
-		try {
-			Synthesizer synth = MidiSystem.getSynthesizer();
-			synth.open();
-
-			final MidiChannel[] mc = synth.getChannels();
-			Instrument[] instr = synth.getDefaultSoundbank().getInstruments();		
-			synth.loadInstrument(instr[90]);
-
-			while (true) {
-				for (int i=0; i<sheet[0].length; i++) {
-					mc[5].noteOn(sheet[0][i], sheet[1][i]);
-					try {
-						Thread.sleep(sheet[2][i]);
-					} catch (InterruptedException e1) {
-					}
-				}
-			}
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-	}
 }
