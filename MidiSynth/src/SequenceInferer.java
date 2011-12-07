@@ -65,11 +65,12 @@ public class SequenceInferer {
 				}
 				break;
 			case ARRAY:
-				String rating = "", note, time, wait;
+				String rating, note, time, wait;
 				/* Read in the format output by the sequencer */
 				while(scanner.hasNextLine()) {
 					/* read in, handling newlines separating data.
 					 * There can be any number of newlines separating each three-line sequence */
+					rating = "";
 					while(rating.length() == 0)
 						rating = scanner.nextLine();
 					note = scanner.nextLine();

@@ -30,7 +30,7 @@ public class MidiTest {
 	MidiChannel[] mc;
 
 	public static void main(String[] args) {        
-		new MidiTest(Format.NOTFILE, "crowd1_sort.txt");
+		new MidiTest(Format.ARRAY, "sample2.txt");
 	}
 
 	public MidiTest(Format fileformat, String filename) {		
