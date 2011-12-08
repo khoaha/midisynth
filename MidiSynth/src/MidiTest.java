@@ -8,6 +8,7 @@ import javax.sound.midi.Instrument;
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Synthesizer;
+import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -47,9 +48,7 @@ public class MidiTest {
 
 			JFrame frame = new JFrame("Midi Sample");                
 			
-			JPanel pane = new JPanel();
-			
-			generateGUI(frame, pane);
+			generateGUI(frame);
 
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			frame.pack();                                       
@@ -65,12 +64,16 @@ public class MidiTest {
 	 * @param frame
 	 * @param pane
 	 */
-	protected void generateGUI(JFrame frame, JPanel pane) {
+	protected void generateGUI(JFrame frame) {
+		frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
+		
 		JPanel ratePanel = createRatePanel();
-
+		
+		JPanel pane = new JPanel();
+		
 		JButton button1 = new JButton(toggleText[0]);
 		JButton button2 = new JButton("Set Seed");
-		frame.getContentPane().add(pane);
+		frame.add(pane);
 		pane.add(button1);
 		pane.add(button2);
 		pane.add(ratePanel);
@@ -82,6 +85,57 @@ public class MidiTest {
 				seed = Long.parseLong(JOptionPane.showInputDialog(((JButton)(e.getSource())).getParent(), "Input seed:"));
 				seedSet = true;
 			}});    // END OF THE ACTION LISTENER
+		
+		JPanel genPanel = new JPanel();
+		
+		ButtonGroup generationGroup = new ButtonGroup();
+		JRadioButton random = new JRadioButton("Random");
+		JRadioButton gen1 = new JRadioButton("Generation 1");
+		JRadioButton gen2 = new JRadioButton("Generation 2");
+		JRadioButton gen3 = new JRadioButton("Generation 3");
+		
+		genPanel.add(random);
+		genPanel.add(gen1);
+		genPanel.add(gen2);
+		genPanel.add(gen3);
+		
+		generationGroup.add(random);
+		generationGroup.add(gen1);
+		generationGroup.add(gen2);
+		generationGroup.add(gen3);
+		
+		random.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				fileformat = Format.NOTFILE;
+			}
+		});
+		
+		gen1.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				fileformat = Format.SEED;
+				filename = "crowd1_sort.txt";
+			}
+		});
+		
+		gen2.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				fileformat = Format.ARRAY;
+				filename = "sample2.txt";
+			}
+		});
+		
+		gen3.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				fileformat = Format.SEED; /* Change to correct format */
+				filename = "sample2.txt"; /* TODO: Change to actual gen 3 file after we have one */
+			}
+		});
+		
+		frame.add(genPanel);
 	}
 
 	/**
