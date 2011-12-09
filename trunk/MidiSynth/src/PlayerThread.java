@@ -24,7 +24,6 @@ class PlayerThread extends Thread {
 			while (running) {
 				for (int i=0; i<sheet[0].length; i++) {
 					if(!running) {
-						mc[5].allSoundOff();
 						break;
 					}
 					
@@ -35,6 +34,7 @@ class PlayerThread extends Thread {
 					}
 				}
 			}
+			mc[5].allSoundOff();
 		} catch (Exception e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();

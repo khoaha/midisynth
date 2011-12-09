@@ -3,6 +3,7 @@ import java.awt.event.ActionListener;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 
 import javax.sound.midi.Instrument;
 import javax.sound.midi.MidiChannel;
@@ -30,6 +31,9 @@ public class MidiTest {
 	
 	MidiChannel[] mc;
 
+	protected int[][] loop;
+	private ButtonGroup ratingGroup;
+	
 	public static void main(String[] args) {        
 		new MidiTest(Format.ARRAY, "sample2.txt");
 	}
@@ -78,6 +82,9 @@ public class MidiTest {
 		pane.add(button2);
 		pane.add(ratePanel);
 		
+		button1.setMnemonic('p');
+		button2.setMnemonic('s');
+		
 		addPlayButtonListener(button1);
 
 		button2.addActionListener(new ActionListener() {
@@ -94,6 +101,11 @@ public class MidiTest {
 		JRadioButton gen2 = new JRadioButton("Generation 2");
 		JRadioButton gen3 = new JRadioButton("Generation 3");
 		
+		random.setMnemonic('r');
+		gen1.setMnemonic('g');
+		gen2.setMnemonic('e');
+		gen3.setMnemonic('n');
+		
 		genPanel.add(random);
 		genPanel.add(gen1);
 		genPanel.add(gen2);
@@ -107,6 +119,7 @@ public class MidiTest {
 		random.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				System.out.println("Random");
 				fileformat = Format.NOTFILE;
 			}
 		});
@@ -114,6 +127,7 @@ public class MidiTest {
 		gen1.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				System.out.println("Generation 1");
 				fileformat = Format.SEED;
 				filename = "crowd1_sort.txt";
 			}
@@ -122,6 +136,7 @@ public class MidiTest {
 		gen2.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				System.out.println("Generation 2");
 				fileformat = Format.ARRAY;
 				filename = "sample2.txt";
 			}
@@ -130,8 +145,9 @@ public class MidiTest {
 		gen3.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				fileformat = Format.SEED; /* Change to correct format */
-				filename = "sample2.txt"; /* TODO: Change to actual gen 3 file after we have one */
+				System.out.println("Generation 3");
+				fileformat = Format.ARRAY; /* Change to correct format */
+				filename = "sample3.txt"; /* TODO: Change to actual gen 3 file after we have one */
 			}
 		});
 		
@@ -147,6 +163,7 @@ public class MidiTest {
 				if (!on) {
 					createMidiThread(fileformat, filename);
 				} else {
+					ratingGroup.clearSelection();
 					thread.shutdown();
 				}
 				on = !on;
@@ -159,7 +176,7 @@ public class MidiTest {
 	 */
 	protected JPanel createRatePanel() {
 		JPanel ratePanel = new JPanel();
-		ButtonGroup ratingGroup = new ButtonGroup();
+		ratingGroup = new ButtonGroup();
 		JRadioButton[] rating = new JRadioButton[10];
 
 		for(i = 0; i < rating.length; i++){
@@ -173,10 +190,20 @@ public class MidiTest {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
 					try {
-						PrintWriter out = new PrintWriter(new FileOutputStream("rates.txt", true));
-						out.println(seed + " " + id);
+						PrintWriter out = new PrintWriter(new FileOutputStream("rates-2.txt", true));
+						switch(fileformat) {
+						case NOTFILE:
+						case SEED:
+							out.println(seed + " " + id);
+							break;
+						case ARRAY:
+							out.println(id);
+							loop = thread.getLoop();
+							out.println(Arrays.toString(loop[0]));
+							out.println(Arrays.toString(loop[1]));
+							out.println(Arrays.toString(loop[2]));
+						}
 						out.close();
-
 					} catch (FileNotFoundException e) {
 						e.printStackTrace();
 					}
