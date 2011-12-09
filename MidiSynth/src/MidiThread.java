@@ -10,6 +10,8 @@ class MidiThread extends Thread {
 	protected String filename;
 	
 	protected PlayerThread player;
+	
+	int[][] loop;
 
 	public MidiThread(MidiChannel[] mc, long seed) {
 		this.mc = mc;
@@ -18,15 +20,21 @@ class MidiThread extends Thread {
 		fileformat = Format.NOTFILE;
 	}
 	
+	/**
+	 * 
+	 * @param mc
+	 * @param filename
+	 * @param fileformat
+	 * @param loop loop is a [3][] array
+	 */
 	public MidiThread(MidiChannel[] mc, String filename, Format fileformat) {
 		this.mc = mc;
 		this.fileformat = fileformat;
 		this.filename = filename;
 	}
 
-	public void run() {
-		int[][] loop = new int[3][]; 
-		
+	public void run() { 
+		this.loop = new int[3][];
 		switch(fileformat) {
 		case NOTFILE:
 			int length;
@@ -75,5 +83,9 @@ class MidiThread extends Thread {
 	
 	public void shutdown() {
 		player.shutdown();
+	}
+	
+	public int[][] getLoop() {
+		return loop;
 	}
 }
