@@ -22,7 +22,7 @@ To observe the effects of these changes, replace Gen 1's source file contents wi
 Or replace Gen 2 or Gen 3's source files with the output from any other generation.
 
 To play a track, just hit "Play" and then hit "Stop" to halt it.
-When a track is halted, the next time "Play" is hit a new track with randomize.
+When a track is halted, the next time "Play" is hit a new track will be randomized.
 
 For the random generation, you can set particular seeds to play again using the "Set Seed" feature.
 The next time you hit "Play", it will create a sample from that seed instead of re-randomizing.
