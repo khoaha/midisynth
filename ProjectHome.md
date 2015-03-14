@@ -1,0 +1,1 @@
+Uses patterns generated from user feedback to create pleasing midi sequences.
